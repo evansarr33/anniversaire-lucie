@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Télégramme</title>
+
+<style>
+body {
+    margin: 0;
+    background: #f4f1ea;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    position: relative;
+    width: 90%;
+    max-width: 500px;
+    padding: 30px;
+    border: 2px solid black;
+    background: #fffdf8;
+    box-shadow: 0 0 25px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+/* 💡 Ampoule */
+.light {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 15px;
+    height: 15px;
+    background: #400000;
+    border-radius: 50%;
+    box-shadow: 0 0 5px #000;
+}
+
+.light.on {
+    background: red;
+    box-shadow: 0 0 20px red;
+}
+
+.title {
+    font-size: 26px;
+    letter-spacing: 3px;
+}
+
+.text {
+    margin-top: 20px;
+    font-size: 16px;
+    line-height: 1.6;
+    white-space: pre-line;
+    min-height: 200px;
+}
+
+button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: black;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="light" id="light"></div>
+
+    <div class="title">TÉLÉGRAMME</div>
+    <div id="text" class="text"></div>
+
+    <button onclick="start()">▶ Lire</button>
+</div>
+
+<script>
+// Morse
+const morse = {
+A: ".-", B: "-...", C: "-.-.", D: "-..", E: ".", F: "..-.",
+G: "--.", H: "....", I: "..", J: ".---", K: "-.-", L: ".-..",
+M: "--", N: "-.", O: "---", P: ".--.", Q: "--.-", R: ".-.",
+S: "...", T: "-", U: "..-", V: "...-", W: ".--", X: "-..-",
+Y: "-.--", Z: "--..",
+"1": ".----","2":"..---","3":"...--","4":"....-","5":".....",
+"6":"-....","7":"--...","8":"---..","9":"----.","0":"-----"
+};
+
+// Message
+const text = `Lucie fête ses 40 ans
+
+Rendez-vous à 20h
+Samedi 24 octobre 2026
+
+Salle des fêtes de Anglade
+
+Préparez-vous pour une soirée de folie
+
+Confirmation au 07 85 57 57 41
+
+Je compte sur vous`;
+
+// ⚙️ Réglages séparés
+const morseUnit = 55; // 🔊 vitesse des bips (plus lent)
+const textSpeed = 120; // ⚡ vitesse du texte
+
+let audioCtx;
+const light = document.getElementById("light");
+
+// 💡 flash ampoule
+function flash(duration) {
+    light.classList.add("on");
+    setTimeout(() => light.classList.remove("on"), duration);
+}
+
+// 🔊 bip morse
+function beep(duration) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.frequency.value = 700;
+    osc.start();
+
+    flash(duration); // synchro lumière
+
+    gain.gain.setValueAtTime(1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration/1000);
+
+    osc.stop(audioCtx.currentTime + duration/1000);
+}
+
+// pause
+function sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+}
+
+// 🔊 MORSE (plus lent)
+async function playMorseFull(text) {
+    for (let char of text) {
+
+        if (char === " ") {
+            await sleep(morseUnit * 4);
+            continue;
+        }
+
+        if (char === "\n") {
+            await sleep(morseUnit * 6);
+            continue;
+        }
+
+        const code = morse[char.toUpperCase()];
+        if (!code) continue;
+
+        for (let s of code) {
+            if (s === ".") {
+                beep(morseUnit);
+                await sleep(morseUnit);
+            } else {
+                beep(morseUnit * 3);
+                await sleep(morseUnit * 3);
+            }
+            await sleep(morseUnit);
+        }
+
+        await sleep(morseUnit * 2);
+    }
+}
+
+// ⚡ TEXTE rapide
+async function displayFast(text) {
+    const el = document.getElementById("text");
+    const words = text.split(" ");
+
+    for (let word of words) {
+        el.innerHTML += word + " ";
+        await sleep(textSpeed);
+    }
+}
+
+// 🚀 lancement
+function start() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    document.getElementById("text").innerHTML = "";
+
+    // parallèle 🔥
+    playMorseFull(text);
+    displayFast(text);
+}
+</script>
+
+</body>
+</html>
