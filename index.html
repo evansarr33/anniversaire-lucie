@@ -1,3 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Télégramme</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Courier New', monospace;
+    background: #0e0e0e;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* 🎉 confettis */
+.confetti {
+    position: absolute;
+    width: 5px;
+    height: 10px;
+    background: white;
+    opacity: 0.15;
+    animation: fall linear infinite;
+}
+.confetti:nth-child(even){ background:#666; }
+
+@keyframes fall {
+    0% { transform: translateY(-120vh) rotate(0deg); }
+    100% { transform: translateY(120vh) rotate(360deg); }
+}
+
+/* 📦 container */
+.container {
+    position: relative;
+    width: 92%;
+    max-width: 520px;
+    padding: 28px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 18px;
+    backdrop-filter: blur(12px);
+    text-align: center;
+}
+
+/* 💡 light */
+.light {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #222;
+}
+
+.light.on {
+    background: red;
+    box-shadow: 0 0 20px red;
+}
+
+/* title */
+.title {
+    font-size: 22px;
+    letter-spacing: 4px;
+}
+
+/* text */
+.text {
+    margin-top: 18px;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-line;
+    min-height: 220px;
+    color: #eaeaea;
+}
+
+/* button */
+button {
+    margin-top: 15px;
+    padding: 12px 20px;
+    background: white;
+    color: black;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+/* location */
+#location {
+    display: none;
+    margin-top: 15px;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+@media (max-width: 480px) {
+    .title { font-size: 20px; }
+}
+</style>
+</head>
+
+<body>
+
+<script>
+for (let i = 0; i < 35; i++) {
+    const d = document.createElement("div");
+    d.className = "confetti";
+    d.style.left = Math.random() * 100 + "vw";
+    d.style.animationDuration = (3 + Math.random() * 4) + "s";
+    document.body.appendChild(d);
+}
+</script>
+
+<div class="container">
+    <div class="light" id="light"></div>
+
+    <div class="title">TÉLÉGRAMME</div>
+
+    <div id="text" class="text"></div>
+
+    <button onclick="start()">▶ DÉMARRER</button>
+
+    <div id="location">
+        📍 Salle des fêtes d'Anglade (33)<br>
+        <button onclick="openMaps()">Ouvrir dans Google Maps</button>
+    </div>
+</div>
+
 <script>
 const morse = {
 A: ".-", B: "-...", C: "-.-.", D: "-..", E: ".", F: "..-.",
@@ -9,7 +142,7 @@ Y: "-.--", Z: "--..",
 "6":"-....","7":"--...","8":"---..","9":"----.","0":"-----"
 };
 
-const text = `Lucie fête ses 40 ans
+const message = `Lucie fête ses 40 ans
 
 Rendez-vous à 20h
 Samedi 24 octobre 2026
@@ -23,10 +156,10 @@ Confirmation au 07 85 57 57 41
 Je compte sur vous`;
 
 const morseUnit = 70;
-const textSpeed = 90;
+const textSpeed = 85;
 
 let audioCtx;
-const light = document.getElementById("light");
+let light = document.getElementById("light");
 
 function flash(t){
     light.classList.add("on");
@@ -40,15 +173,16 @@ function beep(duration){
     osc.type = "sine";
     osc.frequency.value = 750;
 
-    gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
-
     osc.connect(gain);
     gain.connect(audioCtx.destination);
+
+    gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
 
     osc.start();
     flash(duration);
 
     gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration/1000);
+
     osc.stop(audioCtx.currentTime + duration/1000);
 }
 
@@ -56,13 +190,13 @@ function sleep(ms){
     return new Promise(r => setTimeout(r, ms));
 }
 
-async function playMorseFull(txt){
-    for (let char of txt){
+async function playMorse(text){
+    for (let c of text){
 
-        if (char === " ") { await sleep(morseUnit*4); continue; }
-        if (char === "\n") { await sleep(morseUnit*6); continue; }
+        if (c === " ") { await sleep(morseUnit*4); continue; }
+        if (c === "\n") { await sleep(morseUnit*6); continue; }
 
-        const code = morse[char.toUpperCase()];
+        const code = morse[c.toUpperCase()];
         if (!code) continue;
 
         for (let s of code){
@@ -80,21 +214,23 @@ async function playMorseFull(txt){
     }
 }
 
-async function displayFast(txt){
+async function displayText(text){
     const el = document.getElementById("text");
 
-    for (let i = 0; i < txt.length; i++){
-        el.innerHTML += txt[i];
+    for (let i = 0; i < text.length; i++){
+        el.innerHTML += text[i];
         await sleep(textSpeed);
     }
 
-    // ✅ FIN → affiche adresse
+    // FIN → affiche adresse
     document.getElementById("location").style.display = "block";
 }
 
 function openMaps(){
-    const url = "https://www.google.com/maps/search/?api=1&query=Salle+des+fetes+d%27Anglade+33";
-    window.open(url, "_blank");
+    window.open(
+        "https://www.google.com/maps/search/?api=1&query=Salle+des+fetes+d%27Anglade+33",
+        "_blank"
+    );
 }
 
 function start(){
@@ -103,7 +239,10 @@ function start(){
     document.getElementById("text").innerHTML = "";
     document.getElementById("location").style.display = "none";
 
-    playMorseFull(text);
-    displayFast(text);
+    playMorse(message);
+    displayText(message);
 }
 </script>
+
+</body>
+</html>
